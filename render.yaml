@@ -3,13 +3,17 @@ services:
     name: chatterbox-tts-api
     env: python
     plan: starter
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: python api_server.py
     envVars:
       - key: PYTORCH_ENABLE_MPS_FALLBACK
         value: "1"
       - key: PORT
         value: "8000"
+      - key: CUDA_VISIBLE_DEVICES
+        value: ""
+      - key: PIP_NO_CACHE_DIR
+        value: "1"
     disk:
       name: chatterbox-models
       sizeGB: 10
