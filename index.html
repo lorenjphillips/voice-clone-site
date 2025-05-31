@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatterbox TTS Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        textarea, input, button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        input {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .audio-player {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #audioPlayer {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .loading {
+            background: rgba(255, 193, 7, 0.2);
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Chatterbox TTS</h1>
+        
+        <form id="ttsForm">
+            <div class="form-group">
+                <label for="text">Text to synthesize:</label>
+                <textarea id="text" placeholder="Enter text here..." required>Hello! This is a test of the Chatterbox TTS system. It can generate natural-sounding speech with emotion control.</textarea>
+            </div>
+            
+            <div class="controls">
+                <div class="form-group">
+                    <label for="exaggeration">Exaggeration: <span id="exagValue">0.5</span></label>
+                    <input type="range" id="exaggeration" min="0.25" max="2" step="0.05" value="0.5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="cfgWeight">CFG/Pace: <span id="cfgValue">0.5</span></label>
+                    <input type="range" id="cfgWeight" min="0" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="form-group">
+                    <label for="temperature">Temperature: <span id="tempValue">0.8</span></label>
+                    <input type="range" id="temperature" min="0.05" max="2" step="0.05" value="0.8">
+                </div>
+                
+                <div class="form-group">
+                    <label for="seed">Seed (0 = random):</label>
+                    <input type="number" id="seed" value="0" min="0">
+                </div>
+            </div>
+            
+            <button type="submit" id="generateBtn">🎙️ Generate Speech</button>
+        </form>
+        
+        <div id="status"></div>
+        
+        <div id="audioContainer" class="audio-player" style="display: none;">
+            <h3>Generated Audio:</h3>
+            <audio id="audioPlayer" controls>
+                Your browser does not support the audio element.
+            </audio>
+            <div>
+                <button type="button" id="downloadBtn">💾 Download Audio</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000'; // Change this to your deployed API URL
+        
+        // DOM Elements
+        const form = document.getElementById('ttsForm');
+        const statusDiv = document.getElementById('status');
+        const audioContainer = document.getElementById('audioContainer');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // Slider value displays
+        const exagSlider = document.getElementById('exaggeration');
+        const cfgSlider = document.getElementById('cfgWeight');
+        const tempSlider = document.getElementById('temperature');
+        
+        // Update slider value displays
+        exagSlider.oninput = () => document.getElementById('exagValue').textContent = exagSlider.value;
+        cfgSlider.oninput = () => document.getElementById('cfgValue').textContent = cfgSlider.value;
+        tempSlider.oninput = () => document.getElementById('tempValue').textContent = tempSlider.value;
+        
+        // Global audio data for download
+        let currentAudioBlob = null;
+        
+        function showStatus(message, type) {
+            statusDiv.innerHTML = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+        
+        function hideStatus() {
+            statusDiv.style.display = 'none';
+        }
+        
+        async function generateTTS(data) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/tts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'TTS generation failed');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const text = document.getElementById('text').value.trim();
+            if (!text) {
+                showStatus('Please enter some text', 'error');
+                return;
+            }
+            
+            if (text.length > 300) {
+                showStatus('Text must be 300 characters or less', 'error');
+                return;
+            }
+            
+            const requestData = {
+                text: text,
+                exaggeration: parseFloat(exagSlider.value),
+                temperature: parseFloat(tempSlider.value),
+                cfg_weight: parseFloat(cfgSlider.value),
+                seed: parseInt(document.getElementById('seed').value) || 0
+            };
+            
+            // Show loading status
+            showStatus('🎙️ Generating speech... This may take 10-20 seconds.', 'loading');
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+            
+            try {
+                const result = await generateTTS(requestData);
+                
+                // Convert base64 to blob
+                const audioData = atob(result.audio_base64);
+                const audioArray = new Uint8Array(audioData.length);
+                for (let i = 0; i < audioData.length; i++) {
+                    audioArray[i] = audioData.charCodeAt(i);
+                }
+                currentAudioBlob = new Blob([audioArray], { type: 'audio/wav' });
+                
+                // Create audio URL and play
+                const audioUrl = URL.createObjectURL(currentAudioBlob);
+                audioPlayer.src = audioUrl;
+                audioContainer.style.display = 'block';
+                
+                showStatus(`✅ Speech generated successfully! Sample rate: ${result.sample_rate} Hz`, 'success');
+                
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('TTS Error:', error);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🎙️ Generate Speech';
+            }
+        });
+        
+        downloadBtn.addEventListener('click', () => {
+            if (currentAudioBlob) {
+                const url = URL.createObjectURL(currentAudioBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'tts_audio.wav';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+        
+        // Check API health on page load
+        fetch(`${API_BASE_URL}/health`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'healthy') {
+                    showStatus(`✅ API connected. Device: ${data.device}`, 'success');
+                } else {
+                    showStatus('⚠️ API health check failed', 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('❌ Cannot connect to API. Make sure the server is running.', 'error');
+            });
+    </script>
+</body>
+</html> 
