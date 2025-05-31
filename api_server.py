@@ -2,6 +2,7 @@
 """
 Minimal Chatterbox TTS API Server
 Direct integration with chatterbox-tts package
+Optimized with lazy loading for Render (2GB RAM plan)
 """
 
 import os
@@ -9,6 +10,9 @@ import io
 import base64
 import tempfile
 import shutil
+import asyncio
+import gc
+import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -18,54 +22,104 @@ from pydantic import BaseModel
 import torch
 import torchaudio as ta
 
-# Global model instance
+# Global model instance - will be loaded lazily on first request
 model = None
+model_loading = False
+model_load_time = None
 
 # Set environment for better compatibility
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+os.environ['OMP_NUM_THREADS'] = '2'  # Allow more threads with 2GB RAM
+os.environ['MKL_NUM_THREADS'] = '2'
 
 def get_device():
-    """Determine the best device for inference"""
+    """Determine best device - prefer CPU for stability, allow CUDA if available"""
+    # With 2GB RAM, we can be more flexible about device selection
     if torch.cuda.is_available():
+        print("🎮 CUDA detected, using GPU for better performance")
         return "cuda"
     else:
+        print("🖥️  Using CPU for inference")
         return "cpu"
 
-def load_model():
-    """Load the ChatterboxTTS model"""
-    global model
+async def load_model_async():
+    """
+    🔥 LAZY LOADING: Load the ChatterboxTTS model only when first needed
+    This prevents startup crashes and lets the server bind to port immediately
+    """
+    global model, model_loading, model_load_time
+    
+    # If model already loaded, return immediately
+    if model is not None:
+        return True
+        
+    # If another request is already loading, wait for it
+    if model_loading:
+        print("⏳ Model already loading, waiting...")
+        while model_loading and model is None:
+            await asyncio.sleep(0.1)
+        return model is not None
+    
+    # Start loading process
+    model_loading = True
+    start_time = time.time()
+    
     try:
+        print("📦 LAZY LOADING: Loading ChatterboxTTS model on first request...")
         from chatterbox.tts import ChatterboxTTS
         
         device = get_device()
-        print(f"Loading ChatterboxTTS model on device: {device}")
+        print(f"🚀 Loading model on device: {device}")
         
+        # Force garbage collection before loading
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Load model with device selection
         model = ChatterboxTTS.from_pretrained(device=device)
-        print("✅ ChatterboxTTS model loaded successfully!")
+        
+        # Force garbage collection after loading
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        model_load_time = time.time() - start_time
+        print(f"✅ ChatterboxTTS model loaded successfully in {model_load_time:.2f}s!")
+        model_loading = False
         return True
         
     except Exception as e:
         print(f"❌ Error loading ChatterboxTTS model: {e}")
+        model_loading = False
+        model_load_time = None
         return False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan event handler for startup and shutdown"""
-    # Startup
+    """
+    🎯 LAZY LOADING LIFESPAN: Don't load model here!
+    This ensures fast startup and immediate port binding
+    """
     print("🚀 Starting Chatterbox TTS API Server...")
-    success = load_model()
-    if not success:
-        print("❌ Failed to load model on startup")
-        raise RuntimeError("Failed to load ChatterboxTTS model")
+    print("📝 LAZY LOADING: Model will load on first TTS request")
+    print("🏥 Server will be healthy immediately for Render detection")
     yield
-    # Shutdown
+    # Shutdown cleanup
     print("👋 Shutting down Chatterbox TTS API Server...")
+    global model
+    if model is not None:
+        print("🧹 Cleaning up model from memory...")
+        del model
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 # Initialize FastAPI app
 app = FastAPI(
     title="Chatterbox TTS API",
-    description="Clean TTS API using ChatterboxTTS",
-    version="1.0.0",
+    description="Lazy-loaded TTS API using ChatterboxTTS (2GB RAM optimized)",
+    version="1.1.0",
     lifespan=lifespan
 )
 
@@ -102,26 +156,51 @@ class TTSResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint - always responds fast due to lazy loading"""
     return {
-        "message": "Chatterbox TTS API is running!",
+        "message": "🎤 Chatterbox TTS API is running!",
         "model_loaded": model is not None,
-        "device": get_device()
+        "model_loading": model_loading,
+        "model_load_time": f"{model_load_time:.2f}s" if model_load_time else "N/A",
+        "device": get_device() if model is not None else "TBD",
+        "optimization": "lazy-loaded for 2GB RAM plan",
+        "status": "🟢 Ready for requests"
     }
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check - always healthy due to lazy loading"""
     return {
         "status": "healthy",
         "model_loaded": model is not None,
-        "device": get_device(),
-        "torch_version": torch.__version__
+        "model_loading": model_loading,
+        "device": get_device() if model is not None else "TBD",
+        "torch_version": torch.__version__,
+        "lazy_loading": "✅ enabled"
     }
+
+@app.post("/warm-up")
+async def warm_up():
+    """
+    🔥 Warm up endpoint: Manually trigger model loading
+    Call this after deployment to pre-load the model
+    """
+    success = await load_model_async()
+    if success:
+        return {
+            "message": "🔥 Model warmed up successfully!",
+            "device": get_device(),
+            "load_time": f"{model_load_time:.2f}s"
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Failed to warm up model")
 
 @app.post("/tts", response_model=TTSResponse)
 async def generate_tts(request: TTSRequest):
-    """Generate TTS audio from text (JSON API)"""
+    """
+    🗣️ Generate TTS audio from text (JSON API)
+    First call will trigger lazy loading
+    """
     return await _generate_tts_internal(
         text=request.text,
         exaggeration=request.exaggeration,
@@ -140,7 +219,10 @@ async def generate_tts_with_voice(
     seed: int = Form(0),
     audio_file: Optional[UploadFile] = File(None)
 ):
-    """Generate TTS audio with optional voice cloning (Form API)"""
+    """
+    🎭 Generate TTS audio with optional voice cloning (Form API)
+    First call will trigger lazy loading
+    """
     return await _generate_tts_internal(
         text=text,
         exaggeration=exaggeration,
@@ -158,30 +240,42 @@ async def _generate_tts_internal(
     seed: int,
     audio_file: Optional[UploadFile]
 ):
-    """Internal TTS generation function"""
+    """
+    🎯 Internal TTS generation with lazy loading
+    """
     global model
     
     # Validate input
     if not text or len(text.strip()) == 0:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
-    if len(text) > 300:
-        raise HTTPException(status_code=400, detail="Text must be 300 characters or less")
+    # Increased limit for 2GB RAM plan
+    if len(text) > 500:
+        raise HTTPException(status_code=400, detail="Text must be 500 characters or less")
     
-    # Ensure model is loaded
+    # 🔥 LAZY LOADING: Load model only when first TTS request comes in
     if model is None:
-        raise HTTPException(status_code=500, detail="TTS model not loaded")
+        print("🔥 LAZY LOADING: First TTS request - loading model now...")
+        success = await load_model_async()
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to load TTS model")
+        print("✅ Model loaded, proceeding with TTS generation...")
     
     audio_prompt_path = None
     
     try:
+        # Memory optimization
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         # Handle audio file upload for voice cloning
         if audio_file and audio_file.size > 0:
-            print(f"Processing uploaded audio file: {audio_file.filename}")
+            print(f"🎵 Processing uploaded audio file: {audio_file.filename}")
             
-            # Validate audio file
-            if audio_file.size > 10 * 1024 * 1024:  # 10MB limit
-                raise HTTPException(status_code=400, detail="Audio file too large (max 10MB)")
+            # Increased limit for 2GB RAM plan
+            if audio_file.size > 15 * 1024 * 1024:  # 15MB limit
+                raise HTTPException(status_code=400, detail="Audio file too large (max 15MB)")
             
             # Check file extension
             allowed_extensions = ['.wav', '.mp3', '.flac', '.m4a', '.ogg']
@@ -192,14 +286,14 @@ async def _generate_tts_internal(
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
                 shutil.copyfileobj(audio_file.file, tmp_file)
                 audio_prompt_path = tmp_file.name
-                print(f"Saved audio file to: {audio_prompt_path}")
+                print(f"💾 Saved audio file to: {audio_prompt_path}")
         
         # Set seed if provided
         if seed != 0:
             torch.manual_seed(seed)
         
         # Generate audio using ChatterboxTTS
-        print(f"Generating TTS for: {text[:50]}...")
+        print(f"🎤 Generating TTS for: {text[:50]}...")
         
         # Prepare generation arguments
         generate_args = {
@@ -213,8 +307,14 @@ async def _generate_tts_internal(
         if audio_prompt_path:
             generate_args["audio_prompt_path"] = audio_prompt_path
         
-        # Generate with ChatterboxTTS
-        wav = model.generate(**generate_args)
+        # Generate with memory optimization
+        with torch.inference_mode():
+            wav = model.generate(**generate_args)
+        
+        # Memory cleanup after generation
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         
         # Convert to bytes
         audio_buffer = io.BytesIO()
@@ -226,7 +326,8 @@ async def _generate_tts_internal(
         
         print("✅ TTS generation successful!")
         
-        message = "TTS generation successful"
+        device_info = get_device() if model is not None else "unknown"
+        message = f"TTS generation successful ({device_info})"
         if audio_prompt_path:
             message += " with voice cloning"
         
@@ -245,22 +346,34 @@ async def _generate_tts_internal(
         if audio_prompt_path and os.path.exists(audio_prompt_path):
             try:
                 os.unlink(audio_prompt_path)
-                print(f"Cleaned up temporary file: {audio_prompt_path}")
+                print(f"🧹 Cleaned up temporary file: {audio_prompt_path}")
             except Exception as e:
-                print(f"Warning: Could not delete temporary file: {e}")
+                print(f"⚠️  Warning: Could not delete temporary file: {e}")
+        
+        # Final memory cleanup
+        gc.collect()
 
 @app.get("/models/info")
 async def model_info():
-    """Get model information"""
-    global model
+    """Get detailed model information"""
+    global model, model_load_time
+    
     if model is None:
-        raise HTTPException(status_code=500, detail="Model not loaded")
+        return {
+            "loaded": False,
+            "device": "TBD",
+            "load_time": "N/A",
+            "message": "🔥 Model not loaded yet - will lazy load on first TTS request",
+            "lazy_loading": "✅ enabled"
+        }
     
     return {
         "loaded": True,
         "sample_rate": model.sr,
         "device": get_device(),
-        "message": "ChatterboxTTS model is ready"
+        "load_time": f"{model_load_time:.2f}s" if model_load_time else "N/A",
+        "message": "🎤 ChatterboxTTS model is ready!",
+        "lazy_loading": "✅ enabled"
     }
 
 if __name__ == "__main__":
@@ -269,5 +382,16 @@ if __name__ == "__main__":
     # Get port from environment (for Render deployment)
     port = int(os.environ.get("PORT", 8000))
     
-    print(f"Starting server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port) 
+    print(f"🚀 Starting lazy-loaded server on port {port}")
+    print(f"💾 Memory plan: 2GB RAM")
+    print(f"🔥 Lazy loading: Model loads on first TTS request")
+    
+    # Run with optimized settings for 2GB plan
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=port,
+        workers=1,  # Single worker for memory efficiency
+        timeout_keep_alive=60,  # Longer timeout for model loading
+        access_log=True  # Re-enable access logs with more memory
+    ) 
