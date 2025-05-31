@@ -1,46 +1,51 @@
 #!/usr/bin/env python3
+"""
+Minimal Chatterbox TTS API Server
+Direct integration with chatterbox-tts package
+"""
+
 import os
 import io
 import base64
+import tempfile
+import shutil
 from contextlib import asynccontextmanager
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 import torch
 import torchaudio as ta
-from chatterbox.tts import ChatterboxTTS
-import uvicorn
-import tempfile
-import shutil
 
-# Set environment for compatibility
-os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
-
-# Global model variable
+# Global model instance
 model = None
 
+# Set environment for better compatibility
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+
 def get_device():
-    """Get the best available device with fallback to CPU for compatibility"""
+    """Determine the best device for inference"""
     if torch.cuda.is_available():
         return "cuda"
-    elif torch.backends.mps.is_available():
-        # Use CPU for better compatibility
-        return "cpu"
     else:
         return "cpu"
 
 def load_model():
-    """Load the TTS model once on startup"""
+    """Load the ChatterboxTTS model"""
     global model
     try:
+        from chatterbox.tts import ChatterboxTTS
+        
         device = get_device()
-        print(f"Loading Chatterbox TTS model on device: {device}")
+        print(f"Loading ChatterboxTTS model on device: {device}")
+        
         model = ChatterboxTTS.from_pretrained(device=device)
-        print("✅ Model loaded successfully!")
+        print("✅ ChatterboxTTS model loaded successfully!")
         return True
+        
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
+        print(f"❌ Error loading ChatterboxTTS model: {e}")
         return False
 
 @asynccontextmanager
@@ -50,40 +55,39 @@ async def lifespan(app: FastAPI):
     print("🚀 Starting Chatterbox TTS API Server...")
     success = load_model()
     if not success:
-        print("⚠️  Warning: Model failed to load on startup")
+        print("❌ Failed to load model on startup")
+        raise RuntimeError("Failed to load ChatterboxTTS model")
     yield
     # Shutdown
     print("👋 Shutting down Chatterbox TTS API Server...")
 
-# Initialize FastAPI app with lifespan
+# Initialize FastAPI app
 app = FastAPI(
     title="Chatterbox TTS API",
-    description="Simple TTS API using Chatterbox with voice cloning support",
+    description="Clean TTS API using ChatterboxTTS",
     version="1.0.0",
     lifespan=lifespan
 )
 
-# Add CORS middleware for web app integration
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",  # Production HTTPS
-        "http://voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",   # Production HTTP
-        "https://voice-clone-site.vercel.app",  # Main Vercel domain
-        "http://voice-clone-site.vercel.app",   # Main Vercel domain HTTP
-        "https://localhost:3000",  # Local development HTTPS
-        "http://localhost:3000",   # Local development HTTP
-        "http://localhost:8080",   # Local development  
-        "http://127.0.0.1:3000",   # Local development
-        "http://127.0.0.1:8080",   # Local development
-        "*"  # Allow all origins for now (can be restricted later)
+        "https://voice-clone-site.vercel.app",
+        "http://voice-clone-site.vercel.app",
+        "https://localhost:3000",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080",
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request models
+# Request/Response models
 class TTSRequest(BaseModel):
     text: str
     exaggeration: float = 0.5
@@ -98,7 +102,7 @@ class TTSResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Root endpoint"""
     return {
         "message": "Chatterbox TTS API is running!",
         "model_loaded": model is not None,
@@ -107,7 +111,7 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
+    """Health check endpoint"""
     return {
         "status": "healthy",
         "model_loaded": model is not None,
@@ -136,7 +140,7 @@ async def generate_tts_with_voice(
     seed: int = Form(0),
     audio_file: Optional[UploadFile] = File(None)
 ):
-    """Generate TTS audio from text with optional voice cloning (Form API)"""
+    """Generate TTS audio with optional voice cloning (Form API)"""
     return await _generate_tts_internal(
         text=text,
         exaggeration=exaggeration,
@@ -164,12 +168,9 @@ async def _generate_tts_internal(
     if len(text) > 300:
         raise HTTPException(status_code=400, detail="Text must be 300 characters or less")
     
-    # Load model if not already loaded
+    # Ensure model is loaded
     if model is None:
-        print("Model not loaded, attempting to load...")
-        success = load_model()
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to load TTS model")
+        raise HTTPException(status_code=500, detail="TTS model not loaded")
     
     audio_prompt_path = None
     
@@ -185,7 +186,7 @@ async def _generate_tts_internal(
             # Check file extension
             allowed_extensions = ['.wav', '.mp3', '.flac', '.m4a', '.ogg']
             if not any(audio_file.filename.lower().endswith(ext) for ext in allowed_extensions):
-                raise HTTPException(status_code=400, detail="Unsupported audio format. Use WAV, MP3, FLAC, M4A, or OGG")
+                raise HTTPException(status_code=400, detail="Unsupported audio format")
             
             # Save uploaded file temporarily
             with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
@@ -197,15 +198,23 @@ async def _generate_tts_internal(
         if seed != 0:
             torch.manual_seed(seed)
         
-        # Generate audio
+        # Generate audio using ChatterboxTTS
         print(f"Generating TTS for: {text[:50]}...")
-        wav = model.generate(
-            text,
-            audio_prompt_path=audio_prompt_path,
-            exaggeration=exaggeration,
-            temperature=temperature,
-            cfg_weight=cfg_weight,
-        )
+        
+        # Prepare generation arguments
+        generate_args = {
+            "text": text,
+            "exaggeration": exaggeration,
+            "temperature": temperature,
+            "cfg_weight": cfg_weight,
+        }
+        
+        # Add audio prompt if provided
+        if audio_prompt_path:
+            generate_args["audio_prompt_path"] = audio_prompt_path
+        
+        # Generate with ChatterboxTTS
+        wav = model.generate(**generate_args)
         
         # Convert to bytes
         audio_buffer = io.BytesIO()
@@ -242,26 +251,23 @@ async def _generate_tts_internal(
 
 @app.get("/models/info")
 async def model_info():
-    """Get information about the loaded model"""
+    """Get model information"""
+    global model
     if model is None:
-        return {"loaded": False, "message": "No model loaded"}
+        raise HTTPException(status_code=500, detail="Model not loaded")
     
     return {
         "loaded": True,
         "sample_rate": model.sr,
         "device": get_device(),
-        "model_status": str(model),
-        "message": "Model is ready"
+        "message": "ChatterboxTTS model is ready"
     }
 
 if __name__ == "__main__":
-    # Get port from environment variable (Render sets this)
+    import uvicorn
+    
+    # Get port from environment (for Render deployment)
     port = int(os.environ.get("PORT", 8000))
     
-    print(f"🚀 Starting Chatterbox TTS API Server on port {port}...")
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=port,
-        log_level="info"
-    ) 
+    print(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port) 

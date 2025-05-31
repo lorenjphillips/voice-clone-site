@@ -7,18 +7,4 @@ services:
     startCommand: python api_server.py
     envVars:
       - key: PYTORCH_ENABLE_MPS_FALLBACK
-        value: "1"
-      - key: CUDA_VISIBLE_DEVICES
-        value: ""
-      - key: PIP_NO_CACHE_DIR
-        value: "1"
-      - key: HF_HOME
-        value: "/opt/render/project/models/.cache"
-      - key: TRANSFORMERS_CACHE
-        value: "/opt/render/project/models/.cache/transformers"
-      - key: TORCH_HOME
-        value: "/opt/render/project/models/.cache/torch"
-    disk:
-      name: chatterbox-models
-      sizeGB: 10
-      mountPath: /opt/render/project/models 
+        value: "1" 
