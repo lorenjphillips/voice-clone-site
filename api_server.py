@@ -2,6 +2,7 @@
 import os
 import io
 import base64
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,44 +14,8 @@ import uvicorn
 # Set environment for compatibility
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Chatterbox TTS API",
-    description="Simple TTS API using Chatterbox",
-    version="1.0.0"
-)
-
-# Add CORS middleware for web app integration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",  # Production
-        "http://localhost:3000",  # Local development
-        "http://localhost:8080",  # Local development  
-        "http://127.0.0.1:3000",  # Local development
-        "http://127.0.0.1:8080",  # Local development
-        "null"  # For file:// protocol when opening HTML directly
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Global model variable
 model = None
-
-# Request models
-class TTSRequest(BaseModel):
-    text: str
-    exaggeration: float = 0.5
-    temperature: float = 0.8
-    cfg_weight: float = 0.5
-    seed: int = 0
-
-class TTSResponse(BaseModel):
-    audio_base64: str
-    sample_rate: int
-    message: str
 
 def get_device():
     """Get the best available device with fallback to CPU for compatibility"""
@@ -75,12 +40,58 @@ def load_model():
         print(f"❌ Error loading model: {e}")
         return False
 
-@app.on_event("startup")
-async def startup_event():
-    """Load model when server starts"""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown"""
+    # Startup
+    print("🚀 Starting Chatterbox TTS API Server...")
     success = load_model()
     if not success:
         print("⚠️  Warning: Model failed to load on startup")
+    yield
+    # Shutdown
+    print("👋 Shutting down Chatterbox TTS API Server...")
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="Chatterbox TTS API",
+    description="Simple TTS API using Chatterbox",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware for web app integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",  # Production HTTPS
+        "http://voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",   # Production HTTP
+        "https://voice-clone-site.vercel.app",  # Main Vercel domain
+        "http://voice-clone-site.vercel.app",   # Main Vercel domain HTTP
+        "https://localhost:3000",  # Local development HTTPS
+        "http://localhost:3000",   # Local development HTTP
+        "http://localhost:8080",   # Local development  
+        "http://127.0.0.1:3000",   # Local development
+        "http://127.0.0.1:8080",   # Local development
+        "*"  # Allow all origins for now (can be restricted later)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Request models
+class TTSRequest(BaseModel):
+    text: str
+    exaggeration: float = 0.5
+    temperature: float = 0.8
+    cfg_weight: float = 0.5
+    seed: int = 0
+
+class TTSResponse(BaseModel):
+    audio_base64: str
+    sample_rate: int
+    message: str
 
 @app.get("/")
 async def root():
@@ -168,10 +179,13 @@ async def model_info():
     }
 
 if __name__ == "__main__":
-    print("🚀 Starting Chatterbox TTS API Server...")
+    # Get port from environment variable (Render sets this)
+    port = int(os.environ.get("PORT", 8000))
+    
+    print(f"🚀 Starting Chatterbox TTS API Server on port {port}...")
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8000,
+        port=port,
         log_level="info"
     ) 

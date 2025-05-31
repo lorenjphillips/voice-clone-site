@@ -8,8 +8,6 @@ services:
     envVars:
       - key: PYTORCH_ENABLE_MPS_FALLBACK
         value: "1"
-      - key: PORT
-        value: "8000"
       - key: CUDA_VISIBLE_DEVICES
         value: ""
       - key: PIP_NO_CACHE_DIR

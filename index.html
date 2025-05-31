@@ -153,7 +153,11 @@
         
         const API_BASE_URL = isLocal ? 
             'http://localhost:8000' : 
-            'https://voice-clone-api.onrender.com';
+            'https://voice-clone-site.onrender.com';
+        
+        // Log the API URL for debugging
+        console.log('Environment:', isLocal ? 'local' : 'production');
+        console.log('API Base URL:', API_BASE_URL);
         
         // DOM Elements
         const form = document.getElementById('ttsForm');
@@ -188,6 +192,9 @@
         
         async function generateTTS(data) {
             try {
+                console.log('Making TTS request to:', `${API_BASE_URL}/tts`);
+                console.log('Request data:', data);
+                
                 const response = await fetch(`${API_BASE_URL}/tts`, {
                     method: 'POST',
                     headers: {
@@ -196,6 +203,9 @@
                     body: JSON.stringify(data)
                 });
                 
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.detail || 'TTS generation failed');
@@ -203,6 +213,7 @@
                 
                 return await response.json();
             } catch (error) {
+                console.error('TTS request error:', error);
                 throw error;
             }
         }
@@ -275,17 +286,23 @@
         });
         
         // Check API health on page load
+        console.log('Checking API health...');
         fetch(`${API_BASE_URL}/health`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Health check response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Health check data:', data);
                 if (data.status === 'healthy') {
-                    showStatus(`✅ API connected. Device: ${data.device}`, 'success');
+                    showStatus(`✅ API connected. Device: ${data.device}, Model: ${data.model_loaded ? 'loaded' : 'not loaded'}`, 'success');
                 } else {
                     showStatus('⚠️ API health check failed', 'error');
                 }
             })
             .catch(error => {
-                showStatus('❌ Cannot connect to API. Make sure the server is running.', 'error');
+                console.error('Health check error:', error);
+                showStatus(`❌ Cannot connect to API: ${error.message}`, 'error');
             });
     </script>
 </body>
