@@ -5,54 +5,37 @@ Integrates the actual ChatterboxTTS engine with Mac ARM64 and deployment compati
 """
 
 import os
-import torch
-import torchaudio
+import sys
 import numpy as np
+import torch
 import logging
 from pathlib import Path
+from typing import Optional, Union
 
+# Set up logging
 logger = logging.getLogger(__name__)
+
+# Environment for better compatibility
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 
 def punc_norm(text: str) -> str:
     """
-    Quick cleanup func for punctuation from LLMs or
-    containing chars not seen often in the dataset
+    Normalize punctuation for better TTS output
     """
-    if len(text) == 0:
-        return "You need to add some text for me to talk."
-
-    # Capitalise first letter
-    if text[0].islower():
-        text = text[0].upper() + text[1:]
-
-    # Remove multiple space chars
-    text = " ".join(text.split())
-
-    # Replace uncommon/llm punc
-    punc_to_replace = [
-        ("...", ", "),
-        ("…", ", "),
-        (":", ","),
-        (" - ", ", "),
-        (";", ", "),
-        ("—", "-"),
-        ("–", "-"),
-        (" ,", ","),
-        (""", "\""),
-        (""", "\""),
-        ("'", "'"),
-        ("'", "'"),
-    ]
-    for old_char_sequence, new_char in punc_to_replace:
-        text = text.replace(old_char_sequence, new_char)
-
-    # Add full stop if no ending punc
-    text = text.rstrip(" ")
-    sentence_enders = {".", "!", "?", "-", ","}
-    if not any(text.endswith(p) for p in sentence_enders):
-        text += "."
-
-    return text
+    import re
+    
+    # Replace multiple punctuation with single
+    text = re.sub(r'[.]{2,}', '.', text)
+    text = re.sub(r'[!]{2,}', '!', text)
+    text = re.sub(r'[?]{2,}', '?', text)
+    
+    # Ensure proper spacing after punctuation
+    text = re.sub(r'([.!?])([A-Za-z])', r'\1 \2', text)
+    
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
 
 
 class ChatterboxTTS:
@@ -75,12 +58,13 @@ class ChatterboxTTS:
         if device == "auto":
             if torch.cuda.is_available():
                 device = "cuda"
-            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                # Use CPU for better compatibility in deployment
-                device = "cpu"
-                logger.info("MPS available but using CPU for deployment compatibility")
+            elif torch.backends.mps.is_available():
+                device = "cpu"  # Use CPU for better compatibility
+                logger.info("MPS available but using CPU for maximum compatibility")
             else:
                 device = "cpu"
+        
+        logger.info(f"Initializing ChatterboxTTS on device: {device}")
         
         instance = cls(device=device)
         
@@ -96,61 +80,53 @@ class ChatterboxTTS:
         torch.load = patched_torch_load
         
         try:
-            logger.info(f"Loading real ChatterboxTTS model on device: {device}")
+            logger.info("Attempting to load real ChatterboxTTS model...")
             
             # Try to import and use the real ChatterboxTTS
             try:
-                # Import the real chatterbox package if available
-                import sys
-                import importlib.util
+                # Check if we can import the real chatterbox package
+                logger.info("Checking for chatterbox-tts package...")
                 
-                # Temporarily rename our local chatterbox directory to avoid conflicts
-                current_dir = Path(__file__).parent
-                project_root = current_dir.parent
-                local_chatterbox_dir = project_root / "chatterbox"
-                temp_chatterbox_dir = project_root / "chatterbox_local_temp"
-                
-                # Check if we need to rename to avoid conflicts
-                renamed = False
-                if local_chatterbox_dir.exists() and local_chatterbox_dir.is_dir():
-                    if not temp_chatterbox_dir.exists():
-                        local_chatterbox_dir.rename(temp_chatterbox_dir)
-                        renamed = True
-                        logger.info("Temporarily renamed local chatterbox directory")
-                
+                # First try to import the package
                 try:
-                    # Clear any existing chatterbox imports
-                    modules_to_remove = [mod for mod in sys.modules.keys() if mod.startswith('chatterbox')]
-                    for mod in modules_to_remove:
-                        if 'site-packages' not in sys.modules[mod].__file__:
-                            del sys.modules[mod]
-                    
-                    # Now try to import the real chatterbox
-                    chatterbox_spec = importlib.util.find_spec("chatterbox")
-                    if chatterbox_spec and hasattr(chatterbox_spec, 'origin') and chatterbox_spec.origin:
-                        # Ensure we're importing from site-packages
-                        if 'site-packages' in chatterbox_spec.origin or 'dist-packages' in chatterbox_spec.origin:
-                            # Import the real chatterbox package
-                            import chatterbox.tts as real_chatterbox_module
-                            RealChatterboxTTS = real_chatterbox_module.ChatterboxTTS
-                            logger.info("✅ Using installed ChatterboxTTS package from site-packages")
-                            
-                            # Load the real model
-                            instance.real_model = RealChatterboxTTS.from_pretrained(device=device)
-                            instance.sr = instance.real_model.sr
-                            instance.model_loaded = True
-                            
-                            logger.info("✅ Real ChatterboxTTS model loaded successfully!")
+                    import chatterbox_tts  # Note: package name might be different
+                    logger.info("Found chatterbox_tts package")
+                    real_chatterbox_module = chatterbox_tts
+                except ImportError:
+                    try:
+                        import chatterbox  # Alternative import
+                        if hasattr(chatterbox, 'tts'):
+                            logger.info("Found chatterbox.tts module")
+                            real_chatterbox_module = chatterbox.tts
                         else:
-                            raise ImportError("ChatterboxTTS found but not in site-packages")
-                    else:
-                        raise ImportError("ChatterboxTTS not found")
+                            raise ImportError("chatterbox module found but no tts submodule")
+                    except ImportError:
+                        # Try direct module import
+                        from chatterbox.tts import ChatterboxTTS as RealChatterboxTTS
+                        logger.info("Found direct ChatterboxTTS import")
                         
-                finally:
-                    # Restore the original directory name
-                    if renamed and temp_chatterbox_dir.exists():
-                        temp_chatterbox_dir.rename(local_chatterbox_dir)
-                        logger.info("Restored local chatterbox directory name")
+                        # Load the real model
+                        instance.real_model = RealChatterboxTTS.from_pretrained(device=device)
+                        instance.sr = getattr(instance.real_model, 'sr', 24000)
+                        instance.model_loaded = True
+                        
+                        logger.info("✅ Real ChatterboxTTS model loaded successfully!")
+                        return instance
+                
+                # If we have the module, try to get the ChatterboxTTS class
+                if hasattr(real_chatterbox_module, 'ChatterboxTTS'):
+                    RealChatterboxTTS = real_chatterbox_module.ChatterboxTTS
+                    logger.info("Found ChatterboxTTS class in module")
+                    
+                    # Load the real model
+                    instance.real_model = RealChatterboxTTS.from_pretrained(device=device)
+                    instance.sr = getattr(instance.real_model, 'sr', 24000)
+                    instance.model_loaded = True
+                    
+                    logger.info("✅ Real ChatterboxTTS model loaded successfully!")
+                    return instance
+                else:
+                    raise ImportError("ChatterboxTTS class not found in module")
                 
             except ImportError as e:
                 logger.warning(f"Could not import real ChatterboxTTS: {e}")
@@ -205,14 +181,21 @@ class ChatterboxTTS:
         Generate speech using the real ChatterboxTTS model
         """
         try:
+            # Prepare arguments for the real model
+            generation_args = {
+                'text': text,
+                'exaggeration': exaggeration,
+                'temperature': temperature,
+                'cfg_weight': cfg_weight,
+            }
+            
+            # Add audio prompt if provided
+            if audio_prompt_path and os.path.exists(audio_prompt_path):
+                generation_args['audio_prompt_path'] = audio_prompt_path
+                logger.info(f"Using audio prompt: {audio_prompt_path}")
+            
             # Use the real model's generate method
-            wav = self.real_model.generate(
-                text=text,
-                audio_prompt_path=audio_prompt_path,
-                exaggeration=exaggeration,
-                temperature=temperature,
-                cfg_weight=cfg_weight,
-            )
+            wav = self.real_model.generate(**generation_args)
             
             logger.info(f"Generated real TTS audio: shape={wav.shape}")
             return wav
@@ -344,6 +327,9 @@ class ChatterboxTTS:
             status = "basic_fallback"
         return f"ChatterboxTTS(device={self.device}, sr={self.sr}, status={status})"
 
+
+# Make sure this is available for import
+__all__ = ['ChatterboxTTS', 'punc_norm']
 
 # Compatibility functions for existing code
 def load_model(device="auto"):
