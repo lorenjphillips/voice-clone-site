@@ -23,7 +23,14 @@ app = FastAPI(
 # Add CORS middleware for web app integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app"],  # Configure this properly for production
+    allow_origins=[
+        "voice-clone-site-lmj808t4l-lorenphillips-protonmailcs-projects.vercel.app",  # Production
+        "http://localhost:3000",  # Local development
+        "http://localhost:8080",  # Local development  
+        "http://127.0.0.1:3000",  # Local development
+        "http://127.0.0.1:8080",  # Local development
+        "null"  # For file:// protocol when opening HTML directly
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

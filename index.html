@@ -146,8 +146,14 @@
     </div>
 
     <script>
-        // API Configuration
-        const API_BASE_URL = 'https://voice-clone-api.onrender.com';
+        // API Configuration - Auto-detect environment
+        const isLocal = window.location.protocol === 'file:' || 
+                       window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
+        
+        const API_BASE_URL = isLocal ? 
+            'http://localhost:8000' : 
+            'https://voice-clone-api.onrender.com';
         
         // DOM Elements
         const form = document.getElementById('ttsForm');
