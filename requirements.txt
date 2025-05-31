@@ -12,6 +12,10 @@ omegaconf==2.3.0
 conformer==0.3.2
 safetensors==0.5.3
 pydantic>=2.0.0
-chatterbox-tts
+s3tokenizer
+accelerate
+jiwer
+soundfile
+huggingface-hub
 
 --find-links https://download.pytorch.org/whl/torch_stable.html 
