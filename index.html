@@ -3,145 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatterbox TTS Demo</title>
+    <title>🎙️ Chatterbox TTS - Voice Clone</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            backdrop-filter: blur(10px);
         }
-        h1 {
+
+        .header {
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
+            margin-bottom: 40px;
         }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.2em;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
+
         label {
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
+            color: #495057;
         }
-        textarea, input, button {
+
+        input[type="text"], textarea {
             width: 100%;
-            padding: 12px;
-            border: none;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
             border-radius: 10px;
             font-size: 16px;
-            box-sizing: border-box;
+            transition: all 0.3s ease;
+            background: white;
         }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
         textarea {
             resize: vertical;
             min-height: 100px;
-            background: rgba(255, 255, 255, 0.9);
+            font-family: inherit;
         }
-        input {
-            background: rgba(255, 255, 255, 0.9);
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
         }
-        button {
-            background: #4CAF50;
-            color: white;
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-upload-label {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: 3px dashed #dee2e6;
+            border-radius: 10px;
+            text-align: center;
             cursor: pointer;
-            font-weight: 600;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
+            background: white;
         }
-        button:hover {
-            background: #45a049;
+
+        .file-upload-label:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
         }
-        button:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
+
+        .file-upload-label.has-file {
+            border-color: #28a745;
+            background: #f8fff9;
         }
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+
+        .slider-group {
             margin-bottom: 20px;
         }
-        .audio-player {
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #dee2e6;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .audio-container {
             margin-top: 20px;
             text-align: center;
         }
-        #audioPlayer {
+
+        .audio-player {
             width: 100%;
-            margin-top: 10px;
-        }
-        .status {
             margin-top: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
         }
-        .loading {
-            background: rgba(255, 193, 7, 0.2);
+
+        .tips {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
         }
-        .success {
-            background: rgba(76, 175, 80, 0.2);
+
+        .tips h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
         }
-        .error {
-            background: rgba(244, 67, 54, 0.2);
+
+        .tips ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .tips li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .tips li:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .char-counter.warning {
+            color: #f39c12;
+        }
+
+        .char-counter.error {
+            color: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .slider-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="header">
         <h1>🎙️ Chatterbox TTS</h1>
+            <p>Advanced Text-to-Speech with Voice Cloning</p>
+        </div>
         
         <form id="ttsForm">
+            <!-- Text Input Section -->
+            <div class="form-section">
+                <h3>📝 Text to Speech</h3>
             <div class="form-group">
-                <label for="text">Text to synthesize:</label>
-                <textarea id="text" placeholder="Enter text here..." required>Hello! This is a test of the Chatterbox TTS system. It can generate natural-sounding speech with emotion control.</textarea>
+                    <label for="textInput">Enter your text (max 300 characters):</label>
+                    <textarea 
+                        id="textInput" 
+                        name="text" 
+                        placeholder="Type or paste your text here..." 
+                        maxlength="300"
+                        required
+                    ></textarea>
+                    <div id="charCounter" class="char-counter">0 / 300</div>
+                </div>
             </div>
             
-            <div class="controls">
+            <!-- Voice Cloning Section -->
+            <div class="form-section">
+                <h3>🎭 Voice Cloning (Optional)</h3>
                 <div class="form-group">
-                    <label for="exaggeration">Exaggeration: <span id="exagValue">0.5</span></label>
-                    <input type="range" id="exaggeration" min="0.25" max="2" step="0.05" value="0.5">
+                    <label for="audioFile">Upload reference audio (WAV, MP3, FLAC, M4A, OGG):</label>
+                    <div class="file-upload">
+                        <input type="file" id="audioFile" name="audio_file" accept=".wav,.mp3,.flac,.m4a,.ogg">
+                        <label for="audioFile" class="file-upload-label" id="fileLabel">
+                            <span>📁 Choose audio file or drag & drop</span>
+                            <br>
+                            <small>Upload a sample of the voice you want to clone</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice Settings Section -->
+            <div class="form-section">
+                <h3>🎛️ Voice Settings</h3>
+                
+                <div class="slider-group">
+                    <label for="exaggeration">Exaggeration (0.0 = neutral, 1.0 = very expressive):</label>
+                    <div class="slider-container">
+                        <input type="range" id="exaggeration" name="exaggeration" 
+                               min="0" max="1" step="0.1" value="0.5" class="slider">
+                        <span id="exaggerationValue" class="slider-value">0.5</span>
+                    </div>
+                </div>
+
+                <div class="slider-group">
+                    <label for="temperature">Temperature (0.0 = monotone, 1.0 = varied):</label>
+                    <div class="slider-container">
+                        <input type="range" id="temperature" name="temperature" 
+                               min="0" max="1" step="0.1" value="0.8" class="slider">
+                        <span id="temperatureValue" class="slider-value">0.8</span>
+                </div>
+            </div>
+            
+                <div class="slider-group">
+                    <label for="cfgWeight">CFG/Pace (0.0 = fast, 1.0 = slow):</label>
+                    <div class="slider-container">
+                        <input type="range" id="cfgWeight" name="cfg_weight" 
+                               min="0" max="1" step="0.1" value="0.5" class="slider">
+                        <span id="cfgWeightValue" class="slider-value">0.5</span>
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="cfgWeight">CFG/Pace: <span id="cfgValue">0.5</span></label>
-                    <input type="range" id="cfgWeight" min="0" max="1" step="0.05" value="0.5">
+                    <label for="seed">Seed (0 = random, >0 = reproducible):</label>
+                    <input type="number" id="seed" name="seed" value="0" min="0" max="999999">
                 </div>
             </div>
             
-            <div class="controls">
-                <div class="form-group">
-                    <label for="temperature">Temperature: <span id="tempValue">0.8</span></label>
-                    <input type="range" id="temperature" min="0.05" max="2" step="0.05" value="0.8">
-                </div>
-                
-                <div class="form-group">
-                    <label for="seed">Seed (0 = random):</label>
-                    <input type="number" id="seed" value="0" min="0">
-                </div>
-            </div>
-            
-            <button type="submit" id="generateBtn">🎙️ Generate Speech</button>
+            <button type="submit" class="generate-btn" id="generateBtn">
+                🎙️ Generate Speech
+            </button>
         </form>
         
-        <div id="status"></div>
-        
-        <div id="audioContainer" class="audio-player" style="display: none;">
-            <h3>Generated Audio:</h3>
-            <audio id="audioPlayer" controls>
-                Your browser does not support the audio element.
-            </audio>
-            <div>
-                <button type="button" id="downloadBtn">💾 Download Audio</button>
-            </div>
+        <div id="status" class="status" style="display: none;"></div>
+        <div id="audioContainer" class="audio-container" style="display: none;"></div>
+
+        <div class="tips">
+            <h4>💡 Tips for Better Results</h4>
+            <ul>
+                <li>For voice cloning, use clear, high-quality audio samples (5-30 seconds)</li>
+                <li>Higher exaggeration values make speech more expressive and emotional</li>
+                <li>Temperature controls variation - lower for consistent voice, higher for natural variation</li>
+                <li>CFG/Pace affects speed and emphasis - experiment to find your preference</li>
+                <li>Use the same seed value to generate identical results</li>
+                <li>Shorter texts (under 100 characters) often produce better quality</li>
+            </ul>
         </div>
     </div>
 
@@ -163,146 +408,216 @@
         const form = document.getElementById('ttsForm');
         const statusDiv = document.getElementById('status');
         const audioContainer = document.getElementById('audioContainer');
-        const audioPlayer = document.getElementById('audioPlayer');
         const generateBtn = document.getElementById('generateBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const textInput = document.getElementById('textInput');
+        const charCounter = document.getElementById('charCounter');
+        const audioFileInput = document.getElementById('audioFile');
+        const fileLabel = document.getElementById('fileLabel');
         
-        // Slider value displays
-        const exagSlider = document.getElementById('exaggeration');
-        const cfgSlider = document.getElementById('cfgWeight');
-        const tempSlider = document.getElementById('temperature');
+        // Slider elements
+        const exaggerationSlider = document.getElementById('exaggeration');
+        const temperatureSlider = document.getElementById('temperature');
+        const cfgWeightSlider = document.getElementById('cfgWeight');
         
-        // Update slider value displays
-        exagSlider.oninput = () => document.getElementById('exagValue').textContent = exagSlider.value;
-        cfgSlider.oninput = () => document.getElementById('cfgValue').textContent = cfgSlider.value;
-        tempSlider.oninput = () => document.getElementById('tempValue').textContent = tempSlider.value;
+        const exaggerationValue = document.getElementById('exaggerationValue');
+        const temperatureValue = document.getElementById('temperatureValue');
+        const cfgWeightValue = document.getElementById('cfgWeightValue');
+
+        // Character counter
+        textInput.addEventListener('input', updateCharCounter);
         
-        // Global audio data for download
-        let currentAudioBlob = null;
-        
-        function showStatus(message, type) {
-            statusDiv.innerHTML = message;
-            statusDiv.className = `status ${type}`;
-            statusDiv.style.display = 'block';
-        }
-        
-        function hideStatus() {
-            statusDiv.style.display = 'none';
-        }
-        
-        async function generateTTS(data) {
-            try {
-                console.log('Making TTS request to:', `${API_BASE_URL}/tts`);
-                console.log('Request data:', data);
-                
-                const response = await fetch(`${API_BASE_URL}/tts`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'TTS generation failed');
-                }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('TTS request error:', error);
-                throw error;
+        function updateCharCounter() {
+            const length = textInput.value.length;
+            charCounter.textContent = `${length} / 300`;
+            
+            if (length > 280) {
+                charCounter.className = 'char-counter error';
+            } else if (length > 200) {
+                charCounter.className = 'char-counter warning';
+            } else {
+                charCounter.className = 'char-counter';
             }
         }
+
+        // Slider updates
+        exaggerationSlider.addEventListener('input', () => {
+            exaggerationValue.textContent = exaggerationSlider.value;
+        });
         
+        temperatureSlider.addEventListener('input', () => {
+            temperatureValue.textContent = temperatureSlider.value;
+        });
+        
+        cfgWeightSlider.addEventListener('input', () => {
+            cfgWeightValue.textContent = cfgWeightSlider.value;
+        });
+
+        // File upload handling
+        audioFileInput.addEventListener('change', handleFileSelect);
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                fileLabel.classList.add('has-file');
+                fileLabel.innerHTML = `
+                    <span>📎 ${file.name}</span>
+                    <br>
+                    <small>${(file.size / 1024 / 1024).toFixed(2)} MB • Click to change</small>
+                `;
+            } else {
+                fileLabel.classList.remove('has-file');
+                fileLabel.innerHTML = `
+                    <span>📁 Choose audio file or drag & drop</span>
+                    <br>
+                    <small>Upload a sample of the voice you want to clone</small>
+                `;
+        }
+        }
+
+        // Drag and drop handling
+        fileLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#667eea';
+            fileLabel.style.background = '#f8f9ff';
+        });
+
+        fileLabel.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#dee2e6';
+            fileLabel.style.background = 'white';
+        });
+
+        fileLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileLabel.style.borderColor = '#dee2e6';
+            fileLabel.style.background = 'white';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                audioFileInput.files = files;
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+
+        // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const text = document.getElementById('text').value.trim();
+            const text = textInput.value.trim();
             if (!text) {
-                showStatus('Please enter some text', 'error');
+                showStatus('Please enter some text to generate speech.', 'error');
                 return;
             }
             
             if (text.length > 300) {
-                showStatus('Text must be 300 characters or less', 'error');
+                showStatus('Text must be 300 characters or less.', 'error');
                 return;
             }
             
-            const requestData = {
-                text: text,
-                exaggeration: parseFloat(exagSlider.value),
-                temperature: parseFloat(tempSlider.value),
-                cfg_weight: parseFloat(cfgSlider.value),
-                seed: parseInt(document.getElementById('seed').value) || 0
-            };
-            
-            // Show loading status
-            showStatus('🎙️ Generating speech... This may take 10-20 seconds.', 'loading');
             generateBtn.disabled = true;
-            generateBtn.textContent = '⏳ Generating...';
+            showStatus('🎙️ Generating speech... This may take a moment.', 'loading');
+            audioContainer.style.display = 'none';
             
             try {
-                const result = await generateTTS(requestData);
+                // Create FormData for file upload support
+                const formData = new FormData();
+                formData.append('text', text);
+                formData.append('exaggeration', exaggerationSlider.value);
+                formData.append('temperature', temperatureSlider.value);
+                formData.append('cfg_weight', cfgWeightSlider.value);
+                formData.append('seed', document.getElementById('seed').value);
                 
-                // Convert base64 to blob
-                const audioData = atob(result.audio_base64);
-                const audioArray = new Uint8Array(audioData.length);
-                for (let i = 0; i < audioData.length; i++) {
-                    audioArray[i] = audioData.charCodeAt(i);
+                // Add audio file if selected
+                if (audioFileInput.files[0]) {
+                    formData.append('audio_file', audioFileInput.files[0]);
                 }
-                currentAudioBlob = new Blob([audioArray], { type: 'audio/wav' });
+
+                const endpoint = audioFileInput.files[0] ? '/tts-with-voice' : '/tts';
+                const requestOptions = {
+                    method: 'POST',
+                    body: audioFileInput.files[0] ? formData : JSON.stringify({
+                        text: text,
+                        exaggeration: parseFloat(exaggerationSlider.value),
+                        temperature: parseFloat(temperatureSlider.value),
+                        cfg_weight: parseFloat(cfgWeightSlider.value),
+                        seed: parseInt(document.getElementById('seed').value)
+                    }),
+                    headers: audioFileInput.files[0] ? {} : {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, requestOptions);
                 
-                // Create audio URL and play
-                const audioUrl = URL.createObjectURL(currentAudioBlob);
-                audioPlayer.src = audioUrl;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Create audio player
+                const audioBlob = base64ToBlob(data.audio_base64, 'audio/wav');
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                audioContainer.innerHTML = `
+                    <h3>🎉 Generated Audio</h3>
+                    <audio controls class="audio-player" preload="auto">
+                        <source src="${audioUrl}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <br><br>
+                    <a href="${audioUrl}" download="chatterbox_tts_output.wav" 
+                       style="display: inline-block; padding: 10px 20px; background: #28a745; color: white; 
+                              text-decoration: none; border-radius: 5px; margin-top: 10px;">
+                        💾 Download Audio
+                    </a>
+                `;
+                
                 audioContainer.style.display = 'block';
-                
-                showStatus(`✅ Speech generated successfully! Sample rate: ${result.sample_rate} Hz`, 'success');
+                showStatus(`✅ ${data.message}`, 'success');
                 
             } catch (error) {
+                console.error('TTS Generation Error:', error);
                 showStatus(`❌ Error: ${error.message}`, 'error');
-                console.error('TTS Error:', error);
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.textContent = '🎙️ Generate Speech';
             }
         });
-        
-        downloadBtn.addEventListener('click', () => {
-            if (currentAudioBlob) {
-                const url = URL.createObjectURL(currentAudioBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'tts_audio.wav';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
             }
-        });
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+            }
+
+        // Initialize character counter
+        updateCharCounter();
         
-        // Check API health on page load
-        console.log('Checking API health...');
+        // Test API connection on load
         fetch(`${API_BASE_URL}/health`)
-            .then(response => {
-                console.log('Health check response status:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Health check data:', data);
+                console.log('API Health Check:', data);
                 if (data.status === 'healthy') {
-                    showStatus(`✅ API connected. Device: ${data.device}, Model: ${data.model_loaded ? 'loaded' : 'not loaded'}`, 'success');
-                } else {
-                    showStatus('⚠️ API health check failed', 'error');
+                    console.log('✅ API is connected and healthy');
                 }
             })
             .catch(error => {
-                console.error('Health check error:', error);
-                showStatus(`❌ Cannot connect to API: ${error.message}`, 'error');
+                console.error('❌ API connection failed:', error);
+                showStatus('⚠️ Warning: Cannot connect to API server. Please try again later.', 'error');
             });
     </script>
 </body>
