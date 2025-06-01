@@ -22,6 +22,18 @@ from pydantic import BaseModel
 import torch
 import torchaudio as ta
 
+# CRITICAL FIX: Patch torch.load to always use CPU mapping
+# This fixes "Attempting to deserialize object on a CUDA device" error
+_original_torch_load = torch.load
+def _cpu_safe_load(*args, **kwargs):
+    """Ensure all torch.load calls map to CPU for compatibility"""
+    kwargs['map_location'] = 'cpu'
+    return _original_torch_load(*args, **kwargs)
+
+# Apply the global patch
+torch.load = _cpu_safe_load
+print("🔧 Applied CPU-safe torch.load patch for local development")
+
 # Global model instance - will be loaded lazily on first request
 model = None
 model_loading = False
@@ -76,26 +88,8 @@ async def load_model_async():
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         
-        # Load model with device selection and proper CPU mapping
-        # Fix for "Attempting to deserialize object on a CUDA device" error
-        if device == "cpu":
-            # For CPU loading, we need to ensure proper device mapping
-            # Create a custom map_location function for ChatterboxTTS
-            import torch
-            original_load = torch.load
-            def cpu_load(*args, **kwargs):
-                kwargs['map_location'] = 'cpu'
-                return original_load(*args, **kwargs)
-            
-            # Temporarily patch torch.load to always map to CPU
-            torch.load = cpu_load
-            try:
-                model = ChatterboxTTS.from_pretrained(device=device)
-            finally:
-                # Restore original torch.load
-                torch.load = original_load
-        else:
-            model = ChatterboxTTS.from_pretrained(device=device)
+        # Load model - the global torch.load patch handles CPU mapping automatically
+        model = ChatterboxTTS.from_pretrained(device=device)
         
         # Force garbage collection after loading
         gc.collect()
