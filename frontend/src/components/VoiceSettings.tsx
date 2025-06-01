@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 
 interface VoiceSettingsProps {
@@ -109,7 +108,7 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
             placeholder="0 for random"
           />
           <p className="text-xs text-muted-foreground">
-            0 = random, >0 = reproducible results
+            0 = random, &gt;0 = reproducible results
           </p>
         </div>
       </div>

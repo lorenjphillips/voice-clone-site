@@ -1,10 +1,10 @@
-
-import { useState } from 'react';
-import { Mic } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mic, Play, Download } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import VoiceSettings from '../components/VoiceSettings';
 import FileUploadComponent from '../components/FileUpload';
 import TipsSection from '../components/TipsSection';
+import { TTSApi, TTSRequest } from '../lib/api';
 
 const Index = () => {
   const [text, setText] = useState('');
@@ -16,9 +16,33 @@ const Index = () => {
     seed: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState('❌ Error: Failed to load TTS model');
+  const [error, setError] = useState<string | null>(null);
+  const [generatedAudio, setGeneratedAudio] = useState<{
+    audioData: string;
+    sampleRate: number;
+  } | null>(null);
+  const [apiHealth, setApiHealth] = useState<string>('checking...');
 
   const characterLimit = 300;
+
+  // Check API health on component mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        await TTSApi.healthCheck();
+        setApiHealth('✅ API Connected');
+        setError(null);
+      } catch (err) {
+        setApiHealth('❌ API Disconnected');
+        setError('❌ Error: Cannot connect to TTS API. Make sure the backend server is running.');
+      }
+    };
+
+    checkHealth();
+    // Check health every 30 seconds
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleGenerate = async () => {
     if (!text.trim()) {
@@ -27,11 +51,67 @@ const Index = () => {
     }
 
     setIsGenerating(true);
-    // Simulate API call
-    setTimeout(() => {
+    setError(null);
+    setGeneratedAudio(null);
+
+    try {
+      const request: TTSRequest = {
+        text: text.trim(),
+        exaggeration: voiceSettings.exaggeration,
+        temperature: voiceSettings.temperature,
+        cfg_weight: voiceSettings.cfgPace,
+        seed: voiceSettings.seed,
+      };
+
+      let response;
+      if (selectedFile) {
+        response = await TTSApi.generateTTSWithVoice(request, selectedFile);
+      } else {
+        response = await TTSApi.generateTTS(request);
+      }
+
+      setGeneratedAudio({
+        audioData: response.audio_base64,
+        sampleRate: response.sample_rate,
+      });
+
+      setError(null);
+    } catch (err) {
+      console.error('TTS Generation Error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate speech');
+    } finally {
       setIsGenerating(false);
-      alert('Speech generation would happen here!');
-    }, 2000);
+    }
+  };
+
+  const playAudio = () => {
+    if (!generatedAudio) return;
+
+    try {
+      // Create audio element and play the base64 audio
+      const audio = new Audio(`data:audio/wav;base64,${generatedAudio.audioData}`);
+      audio.play().catch(console.error);
+    } catch (err) {
+      console.error('Audio playback error:', err);
+      setError('Failed to play audio');
+    }
+  };
+
+  const downloadAudio = () => {
+    if (!generatedAudio) return;
+
+    try {
+      // Create download link for the audio
+      const link = document.createElement('a');
+      link.href = `data:audio/wav;base64,${generatedAudio.audioData}`;
+      link.download = `chatterbox_tts_${Date.now()}.wav`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Audio download error:', err);
+      setError('Failed to download audio');
+    }
   };
 
   return (
@@ -52,6 +132,9 @@ const Index = () => {
             </h1>
             <p className="text-xl text-muted-foreground">
               Advanced Text-to-Speech with Voice Cloning
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              API Status: {apiHealth}
             </p>
           </div>
           <ThemeToggle />
@@ -109,6 +192,34 @@ const Index = () => {
                 {isGenerating ? 'Generating...' : '🎙️ Generate Speech'}
               </button>
             </div>
+
+            {/* Audio Player Section */}
+            {generatedAudio && (
+              <div className="glass-card p-6 space-y-4">
+                <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  🎵 Generated Audio
+                </h3>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={playAudio}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    Play Audio
+                  </button>
+                  <button
+                    onClick={downloadAudio}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  Sample Rate: {generatedAudio.sampleRate} Hz
+                </p>
+              </div>
+            )}
 
             {/* Error Display */}
             {error && (

@@ -79,21 +79,25 @@ Don't use this model to do bad things. Prompts are sourced from freely available
 
 # 🎙️ Voice Clone Site
 
-A simple, powerful voice cloning website built with Chatterbox TTS. Generate natural-sounding speech with emotion control and voice cloning capabilities.
+A modern voice cloning web application built with Chatterbox TTS. Features a React TypeScript frontend with a Python FastAPI backend for natural-sounding speech generation.
 
 ## ✨ Features
 
-- **High-Quality TTS**: Neural text-to-speech with natural voice synthesis
-- **Emotion Control**: Adjust exaggeration and pace for different speaking styles  
-- **Voice Cloning**: Upload reference audio to clone specific voices (optional)
-- **Web API**: RESTful API for easy integration
-- **Beautiful UI**: Modern, responsive web interface
-- **Production Ready**: Optimized for deployment to Render + Vercel
+- **🎨 Modern React Frontend**: TypeScript + Tailwind CSS + Shadcn/ui components
+- **🎙️ High-Quality TTS**: Neural text-to-speech with natural voice synthesis
+- **🎭 Emotion Control**: Adjust exaggeration and pace for different speaking styles  
+- **🔊 Voice Cloning**: Upload reference audio to clone specific voices (optional)
+- **🌙 Dark/Light Mode**: Beautiful themes with smooth transitions
+- **📱 Mobile Responsive**: Works perfectly on all devices
+- **🎵 Built-in Audio Player**: Play and download generated audio
+- **🔄 Real-time API**: RESTful API with live health monitoring
+- **🚀 Production Ready**: Optimized for deployment
 
 ## 🚀 Quick Start (Local Development)
 
 ### Prerequisites
 - Python 3.8+ 
+- Node.js 18+ (for React frontend)
 - macOS (ARM64 optimized) or Linux
 
 ### Setup
@@ -102,17 +106,23 @@ A simple, powerful voice cloning website built with Chatterbox TTS. Generate nat
 git clone <your-repo-url>
 cd voice-clone-site
 
-# Install dependencies  
+# Install Python dependencies  
 pip install -r requirements.txt
 
-# Start the API server
-python api_server.py
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
 
-# Open the web interface
-open index.html
+# Start both backend and frontend
+python start_dev.py
 ```
 
-The API will be available at `http://localhost:8000` and the web interface will connect automatically.
+This will start:
+- **Backend API**: `http://localhost:8000`
+- **React Frontend**: `http://localhost:5173`
+
+Open `http://localhost:5173` in your browser to use the application.
 
 ## 🌐 Production Deployment
 
@@ -125,8 +135,9 @@ The API will be available at `http://localhost:8000` and the web interface will 
    - Environment: `PYTORCH_ENABLE_MPS_FALLBACK=1`
 
 ### Frontend (Vercel)  
-1. Update API URL in `index.html` to your Render backend
-2. Deploy to Vercel (auto-detects static files)
+1. Deploy the `/frontend` directory to Vercel
+2. Set environment variable: `VITE_API_URL=https://your-api.onrender.com`
+3. Vercel will auto-detect Vite and build the React app
 
 ## 📡 API Usage
 
@@ -140,6 +151,16 @@ curl -X POST "https://your-api.onrender.com/tts" \
     "temperature": 0.8,
     "cfg_weight": 0.5
   }'
+```
+
+### Generate TTS with Voice Cloning
+```bash
+curl -X POST "https://your-api.onrender.com/tts-with-voice" \
+  -F "text=Hello, this is a test!" \
+  -F "exaggeration=0.7" \
+  -F "temperature=0.8" \
+  -F "cfg_weight=0.5" \
+  -F "audio_file=@reference.wav"
 ```
 
 ### Response
@@ -182,14 +203,21 @@ curl -X POST "https://your-api.onrender.com/tts" \
 
 ```
 voice-clone-site/
-├── api_server.py        # FastAPI backend
-├── index.html          # Web interface  
-├── test_api.py         # API testing
-├── local_dev_ui.py     # Local Gradio UI (optional)
-├── requirements.txt    # Python dependencies
-├── render.yaml        # Render deployment config
-├── Procfile          # Process configuration
-└── README.md         # This file
+├── api_server.py           # FastAPI backend
+├── start_dev.py           # Development startup script
+├── frontend/              # React TypeScript frontend
+│   ├── src/
+│   │   ├── components/    # UI components
+│   │   ├── pages/        # Page components
+│   │   ├── lib/          # API client & utilities
+│   │   └── hooks/        # Custom React hooks
+│   ├── package.json      # Frontend dependencies
+│   └── vite.config.ts    # Vite configuration
+├── legacy/               # Deprecated HTML frontend
+├── test_api.py          # API testing
+├── requirements.txt     # Python dependencies
+├── render.yaml         # Render deployment config
+└── README.md           # This file
 ```
 
 ## ⚡ Performance
@@ -199,34 +227,13 @@ voice-clone-site/
 - **Concurrent Users**: Supports multiple simultaneous requests
 - **Audio Quality**: 24kHz sample rate, broadcast quality
 
-## 🐛 Troubleshooting
+## 🆕 Frontend Features
 
-**API not responding?**
-```bash
-# Check if server is running
-python test_api.py
-
-# Restart server
-python api_server.py
-```
-
-**CORS errors in browser?**
-- Update `allow_origins` in `api_server.py` with your frontend URL
-
-**Slow generation?**
-- Upgrade to Render Standard plan for GPU acceleration
-- Close other applications during local development
-
-## 💰 Hosting Costs
-
-- **Render** (Backend): $7-25/month
-- **Vercel** (Frontend): Free for personal projects
-- **Total**: ~$7-25/month for a full production voice cloning site
-
-## 📄 License
-
-MIT License - feel free to use for personal or commercial projects.
-
-## 🙏 Credits
-
-Built with [Chatterbox TTS](https://github.com/resemble-ai/chatterbox) by Resemble AI.
+The React frontend provides:
+- **TypeScript**: Full type safety and better developer experience
+- **Component Architecture**: Reusable, maintainable UI components
+- **Real-time Updates**: Live API health monitoring
+- **Error Handling**: Comprehensive error states and user feedback
+- **Audio Controls**: Built-in player with download functionality
+- **Theme Support**: Dark/light mode with system preference detection
+- **Mobile First**: Responsive design that works on all screen sizes
