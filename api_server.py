@@ -76,8 +76,26 @@ async def load_model_async():
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         
-        # Load model with device selection
-        model = ChatterboxTTS.from_pretrained(device=device)
+        # Load model with device selection and proper CPU mapping
+        # Fix for "Attempting to deserialize object on a CUDA device" error
+        if device == "cpu":
+            # For CPU loading, we need to ensure proper device mapping
+            # Create a custom map_location function for ChatterboxTTS
+            import torch
+            original_load = torch.load
+            def cpu_load(*args, **kwargs):
+                kwargs['map_location'] = 'cpu'
+                return original_load(*args, **kwargs)
+            
+            # Temporarily patch torch.load to always map to CPU
+            torch.load = cpu_load
+            try:
+                model = ChatterboxTTS.from_pretrained(device=device)
+            finally:
+                # Restore original torch.load
+                torch.load = original_load
+        else:
+            model = ChatterboxTTS.from_pretrained(device=device)
         
         # Force garbage collection after loading
         gc.collect()
