@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 
@@ -65,9 +64,9 @@ const FileUploadComponent = ({ onFileSelect }: FileUploadProps) => {
   };
 
   return (
-    <div className="glass-card p-6 space-y-4">
-      <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
-        🎭 Voice Cloning - Optional
+    <div className="glass-card p-4 space-y-3">
+      <h3 className="text-lg font-semibold text-foreground">
+        Voice Cloning - Optional
       </h3>
       
       <p className="text-sm text-muted-foreground">
@@ -75,7 +74,7 @@ const FileUploadComponent = ({ onFileSelect }: FileUploadProps) => {
       </p>
 
       <div
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-300 ${
+        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all duration-300 ${
           isDragOver
             ? 'border-red-500 bg-red-500/10'
             : 'border-border hover:border-red-400 hover:bg-red-400/5'
@@ -93,13 +92,13 @@ const FileUploadComponent = ({ onFileSelect }: FileUploadProps) => {
           className="hidden"
         />
         
-        <div className="space-y-4">
-          <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+        <div className="space-y-2">
+          <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
           
           {selectedFile ? (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">
-                ✅ {selectedFile.name}
+                {selectedFile.name}
               </p>
               <p className="text-xs text-muted-foreground">
                 Size: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
@@ -109,15 +108,15 @@ const FileUploadComponent = ({ onFileSelect }: FileUploadProps) => {
                   e.stopPropagation();
                   clearFile();
                 }}
-                className="mt-2 px-4 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                className="mt-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
               >
                 Remove
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">
-                📁 Choose audio file or drag & drop
+                Choose audio file or drag & drop
               </p>
               <p className="text-xs text-muted-foreground">
                 Supported formats: {supportedFormats.join(', ')}

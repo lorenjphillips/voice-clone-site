@@ -31,14 +31,14 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
   };
 
   return (
-    <div className="glass-card p-6 space-y-6">
-      <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
-        🎛️ Voice Settings
+    <div className="glass-card p-4 space-y-4">
+      <h3 className="text-lg font-semibold text-foreground">
+        Voice Settings
       </h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-3">
         {/* Exaggeration Control */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">
             Exaggeration: {exaggeration.toFixed(1)}
           </label>
@@ -57,7 +57,7 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
         </div>
 
         {/* Temperature Control */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">
             Temperature: {temperature.toFixed(1)}
           </label>
@@ -76,7 +76,7 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
         </div>
 
         {/* CFG/Pace Control */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">
             CFG/Pace: {cfgPace.toFixed(1)}
           </label>
@@ -95,7 +95,7 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
         </div>
 
         {/* Seed Control */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">
             Seed: {seed}
           </label>
@@ -104,7 +104,7 @@ const VoiceSettings = ({ onSettingsChange }: VoiceSettingsProps) => {
             min="0"
             value={seed}
             onChange={(e) => handleSettingChange(setSeed, parseInt(e.target.value) || 0, 'seed')}
-            className="w-full px-3 py-2 bg-background/50 border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-background/50 border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
             placeholder="0 for random"
           />
           <p className="text-xs text-muted-foreground">
