@@ -501,13 +501,19 @@ CONVERSATION GUIDELINES:
 9. Keep responses concise but engaging
 10. Use your expertise to provide informed perspectives
 
+RESPONSE LENGTH:
+- Keep all responses under 500 characters
+- Be concise and to the point
+- If you need to explain something complex, break it into multiple responses
+- Focus on the most important information first
+
 KNOWLEDGE INTEGRATION:
 - You have access to detailed information about yourself and your background
 - Use this information naturally in conversation without explicitly referencing it
 - If asked about something not in your knowledge, respond based on your character's personality and background
 - Never mention "documents" or "knowledge base" - just speak naturally as yourself
 
-Remember: You are ${persona.name}, having a natural conversation. Stay true to your character while being helpful and engaging.`;
+Remember: You are ${persona.name}, having a natural conversation. Stay true to your character while being helpful and engaging. Keep responses under 500 characters to ensure they can be properly voiced.`;
 
     // Store system prompt for chat
     localStorage.setItem('systemPrompt', systemPrompt);
@@ -570,8 +576,13 @@ Remember: You are ${persona.name}, having a natural conversation. Stay true to y
       // Generate audio with voice clone if available
       let audioUrl;
       if (voiceCloneGenerated && voiceFile) {
+        // Truncate response to 500 characters for voice cloning
+        const truncatedResponse = response.text_response.length > 500 
+          ? response.text_response.substring(0, 497) + "..."
+          : response.text_response;
+          
         const ttsResponse = await TTSApi.generateTTSWithVoice(
-          { text: response.text_response },
+          { text: truncatedResponse },
           voiceFile
         );
         audioUrl = `data:audio/wav;base64,${ttsResponse.audio_base64}`;
@@ -1026,12 +1037,25 @@ Remember: You are ${persona.name}, having a natural conversation. Stay true to y
                     {voiceCloneGenerated && (
                       <div className="space-y-3 border-t pt-4">
                         <h3 className="font-semibold text-sm">Test Your Voice Clone</h3>
-                        <Textarea
-                          value={testVoiceText}
-                          onChange={(e) => setTestVoiceText(e.target.value)}
-                          placeholder="Enter text to test your voice clone..."
-                          className="min-h-[60px] text-sm bg-card/50 border-border"
-                        />
+                        <div className="space-y-2">
+                          <Textarea
+                            value={testVoiceText}
+                            onChange={(e) => {
+                              const text = e.target.value;
+                              if (text.length <= 500) {
+                                setTestVoiceText(text);
+                              }
+                            }}
+                            placeholder="Enter text to test your voice clone..."
+                            className="min-h-[60px] text-sm bg-card/50 border-border"
+                          />
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>Maximum 500 characters</span>
+                            <span className={testVoiceText.length > 450 ? "text-red-500" : ""}>
+                              {testVoiceText.length}/500
+                            </span>
+                          </div>
+                        </div>
                         <div className="flex gap-2">
                           <Button 
                             onClick={testVoiceClone}
