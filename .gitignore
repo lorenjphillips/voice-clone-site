@@ -48,3 +48,8 @@ checkpoints/
 **/*.wav
 
 .env
+
+# Knowledge database files
+knowledge_db/
+**/knowledge_db/
+**/*.sqlite3
