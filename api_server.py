@@ -305,7 +305,7 @@ async def _generate_tts_internal(
             torch.manual_seed(seed)
         
         # Generate audio using ChatterboxTTS
-        print(f"🎤 Generating TTS for: {text[:50]}...")
+        print(f"🎤 Generating TTS for: {text}...")
         
         # Prepare generation arguments
         generate_args = {
