@@ -1,0 +1,13 @@
+
+Voice Cloning Technology
+
+Our voice cloning technology uses advanced neural networks to replicate human speech patterns. The system can clone a voice from just a few seconds of audio input.
+
+Key Features:
+- Real-time voice cloning
+- High-quality audio output
+- Minimal latency (under 200ms)
+- Support for multiple languages
+
+The ChatterboxTTS model is based on a 0.5B parameter architecture and has been trained on 500K hours of clean audio data.
+        

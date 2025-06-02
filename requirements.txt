@@ -5,4 +5,6 @@ chatterbox-tts
 torch
 torchaudio
 numpy
-pydantic>=2.0.0 
+pydantic>=2.0.0
+PyPDF2>=3.0.0
+docx2txt>=0.8 
