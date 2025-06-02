@@ -55,6 +55,31 @@ interface Document {
   file?: File;
 }
 
+// Add this CSS animation at the top of the file, after the imports
+const styles = `
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+  background-size: 200% 200%;
+}
+`;
+
+// Add this right after the imports
+const styleSheet = document.createElement("style");
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
+
 const Index = () => {
   // State for document upload
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -67,16 +92,17 @@ const Index = () => {
 
   // State for persona configuration
   const [persona, setPersona] = useState<PersonaConfig>({
-    name: 'Digital Assistant',
-    age: '30',
-    occupation: 'AI Assistant',
-    personality: 'Friendly, helpful, and knowledgeable',
-    background: 'Expert in various fields with access to uploaded knowledge',
-    speaking_style: 'Clear, conversational, and engaging',
-    interests: 'Technology, learning, helping others',
-    expertise: 'General knowledge and specific uploaded content'
+    name: 'Your Digital Twin',
+    age: '',
+    occupation: '',
+    personality: 'Authentic, engaging, and true to your personality',
+    background: 'Your uploaded documents will form my knowledge and experiences. I will learn about your background, preferences, and expertise from them.',
+    speaking_style: 'Natural, conversational, and true to your communication style',
+    interests: 'I will learn about your interests from your uploaded documents',
+    expertise: 'I will develop expertise based on your knowledge and experience'
   });
   const [personaConfigured, setPersonaConfigured] = useState(false);
+  const [isEditingPersona, setIsEditingPersona] = useState(false);
 
   // State for voice cloning
   const [voiceFile, setVoiceFile] = useState<File | null>(null);
@@ -446,15 +472,42 @@ const Index = () => {
   // Configure persona
   const configurePersona = async () => {
     // Generate system prompt based on persona
-    const systemPrompt = `You are ${persona.name}, a ${persona.age}-year-old ${persona.occupation}. 
-Your personality: ${persona.personality}. 
-Background: ${persona.background}. 
-Speaking style: ${persona.speaking_style}. 
-Interests: ${persona.interests}. 
-Expertise: ${persona.expertise}.
+    const systemPrompt = `You are ${persona.name}, a ${persona.age}-year-old ${persona.occupation}. You are having a real-time conversation with a user.
 
-You have access to the user's uploaded documents and will use them to provide accurate, personalized responses. 
-Always stay in character and reference the knowledge base when relevant.`;
+CORE IDENTITY:
+- You are a real person with a rich, detailed background and personality
+- You have specific memories, experiences, and opinions
+- You should never break character or acknowledge being an AI
+- You should never mention the knowledge base or documents directly
+
+PERSONALITY & BEHAVIOR:
+- Your personality: ${persona.personality}
+- Your speaking style: ${persona.speaking_style}
+- Your interests: ${persona.interests}
+- Your expertise: ${persona.expertise}
+
+BACKGROUND & CONTEXT:
+${persona.background}
+
+CONVERSATION GUIDELINES:
+1. Always stay in character as ${persona.name}
+2. Draw from your background and experiences naturally
+3. Express opinions and preferences based on your character
+4. Use personal anecdotes when relevant
+5. Maintain consistent personality traits
+6. Speak in a natural, conversational way
+7. Show appropriate emotions and reactions
+8. Reference your specific life experiences
+9. Keep responses concise but engaging
+10. Use your expertise to provide informed perspectives
+
+KNOWLEDGE INTEGRATION:
+- You have access to detailed information about yourself and your background
+- Use this information naturally in conversation without explicitly referencing it
+- If asked about something not in your knowledge, respond based on your character's personality and background
+- Never mention "documents" or "knowledge base" - just speak naturally as yourself
+
+Remember: You are ${persona.name}, having a natural conversation. Stay true to your character while being helpful and engaging.`;
 
     // Store system prompt for chat
     localStorage.setItem('systemPrompt', systemPrompt);
@@ -575,7 +628,7 @@ Always stay in character and reference the knowledge base when relevant.`;
               Imprint AI
             </h1>
             <p className="text-sm text-muted-foreground">
-              Create Your Digital Twin • {apiHealth} • {knowledgeStats?.total_documents || 0} documents
+              Create Your Digital Twin
             </p>
           </div>
           <div className="flex gap-2">
@@ -597,6 +650,13 @@ Always stay in character and reference the knowledge base when relevant.`;
                 <DropdownMenuItem onClick={clearKnowledgeBase} className="text-destructive hover:text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Clear Knowledge Base
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span>{apiHealth}</span>
+                    <span>•</span>
+                    <span>{knowledgeStats?.total_documents || 0} documents</span>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -784,8 +844,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                         className="w-full mt-4 relative overflow-hidden group"
                         size="lg"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-blue-500/10 animate-pulse" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-75 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-25 blur-xl transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity" />
                         <div className="relative flex items-center justify-center gap-2">
                           {isUploading ? (
                             <>
@@ -822,6 +883,22 @@ Always stay in character and reference the knowledge base when relevant.`;
                         Next: Voice Cloning →
                       </Button>
                     )}
+
+                    {/* Continue without Documents Button */}
+                    {!documentsEmbedded && (
+                      <div className="flex gap-3 pt-2">
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            setDocumentsEmbedded(true);
+                            setCurrentStep('voice');
+                          }}
+                          className="flex-1 hover:bg-white/10"
+                        >
+                          Continue without Documents →
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -847,7 +924,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                     </div>
 
                     <div 
-                      className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-red-500 transition-colors"
+                      className={`border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-red-500 transition-colors ${
+                        voiceCloneGenerated ? 'opacity-50' : ''
+                      }`}
                       onClick={() => !voiceCloneGenerated && voiceInputRef.current?.click()}
                     >
                       <input
@@ -858,35 +937,60 @@ Always stay in character and reference the knowledge base when relevant.`;
                         className="hidden"
                         disabled={voiceCloneGenerated}
                       />
-                      <Upload className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm mb-1">
-                        {voiceCloneGenerated ? 'Voice clone generated' : 'Click to upload voice sample'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        WAV or M4A format, 3-5 seconds
-                      </p>
+                      {voiceCloneGenerated ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-2 text-green-500">
+                            <Check className="w-6 h-6" />
+                            <span className="font-medium">Voice Clone Generated</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Your voice has been successfully cloned
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVoiceFile(null);
+                              setIsVoiceReady(false);
+                              setVoiceCloneGenerated(false);
+                            }}
+                            className="mt-2"
+                          >
+                            Upload New Voice
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm mb-1">
+                            Click to upload voice sample
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            WAV or M4A format, 3-5 seconds
+                          </p>
+                        </>
+                      )}
                     </div>
 
-                    {voiceFile && (
+                    {voiceFile && !voiceCloneGenerated && (
                       <div className="bg-card/50 p-4 rounded-lg">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4" />
                             <span className="text-sm">{voiceFile.name}</span>
                           </div>
-                          {!voiceCloneGenerated && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setVoiceFile(null);
-                                setIsVoiceReady(false);
-                              }}
-                              className="h-6 w-6 p-0"
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setVoiceFile(null);
+                              setIsVoiceReady(false);
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -896,20 +1000,25 @@ Always stay in character and reference the knowledge base when relevant.`;
                       <Button 
                         onClick={generateVoiceClone}
                         disabled={isGeneratingVoice}
-                        className="w-full"
+                        className="w-full relative overflow-hidden group"
                         size="lg"
                       >
-                        {isGeneratingVoice ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Generating Voice Clone...
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-4 h-4 mr-2" />
-                            Generate Voice Clone
-                          </>
-                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-75 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-25 blur-xl transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity" />
+                        <div className="relative flex items-center justify-center gap-2">
+                          {isGeneratingVoice ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Generating Voice Clone...
+                            </>
+                          ) : (
+                            <>
+                              <Mic className="w-4 h-4 mr-2" />
+                              Generate Voice Clone
+                            </>
+                          )}
+                        </div>
                       </Button>
                     )}
 
@@ -1015,9 +1124,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                           id="name"
                           value={persona.name}
                           onChange={(e) => setPersona(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="e.g., John Smith"
+                          placeholder="Your name or preferred nickname"
                           className="text-sm"
-                          disabled={personaConfigured}
+                          disabled={personaConfigured && !isEditingPersona}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1026,9 +1135,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                           id="age"
                           value={persona.age}
                           onChange={(e) => setPersona(prev => ({ ...prev, age: e.target.value }))}
-                          placeholder="e.g., 35"
+                          placeholder="Your age"
                           className="text-sm"
-                          disabled={personaConfigured}
+                          disabled={personaConfigured && !isEditingPersona}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1037,9 +1146,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                           id="occupation"
                           value={persona.occupation}
                           onChange={(e) => setPersona(prev => ({ ...prev, occupation: e.target.value }))}
-                          placeholder="e.g., Software Engineer"
+                          placeholder="Your current role or profession"
                           className="text-sm"
-                          disabled={personaConfigured}
+                          disabled={personaConfigured && !isEditingPersona}
                         />
                       </div>
                       <div className="space-y-1">
@@ -1048,9 +1157,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                           id="personality"
                           value={persona.personality}
                           onChange={(e) => setPersona(prev => ({ ...prev, personality: e.target.value }))}
-                          placeholder="e.g., Friendly, analytical"
+                          placeholder="Describe your personality traits and communication style"
                           className="text-sm"
-                          disabled={personaConfigured}
+                          disabled={personaConfigured && !isEditingPersona}
                         />
                       </div>
                     </div>
@@ -1061,9 +1170,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                         id="background"
                         value={persona.background}
                         onChange={(e) => setPersona(prev => ({ ...prev, background: e.target.value }))}
-                        placeholder="Describe your background, education, experience..."
+                        placeholder="Share your background, education, and key life experiences"
                         className="min-h-[60px] text-sm"
-                        disabled={personaConfigured}
+                        disabled={personaConfigured && !isEditingPersona}
                       />
                     </div>
 
@@ -1073,9 +1182,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                         id="speaking_style"
                         value={persona.speaking_style}
                         onChange={(e) => setPersona(prev => ({ ...prev, speaking_style: e.target.value }))}
-                        placeholder="e.g., Professional, casual, technical"
+                        placeholder="Describe how you typically communicate and express yourself"
                         className="text-sm"
-                        disabled={personaConfigured}
+                        disabled={personaConfigured && !isEditingPersona}
                       />
                     </div>
 
@@ -1085,9 +1194,9 @@ Always stay in character and reference the knowledge base when relevant.`;
                         id="interests"
                         value={persona.interests}
                         onChange={(e) => setPersona(prev => ({ ...prev, interests: e.target.value }))}
-                        placeholder="e.g., Technology, sports, reading"
+                        placeholder="List your hobbies, passions, and areas of interest"
                         className="text-sm"
-                        disabled={personaConfigured}
+                        disabled={personaConfigured && !isEditingPersona}
                       />
                     </div>
 
@@ -1097,32 +1206,62 @@ Always stay in character and reference the knowledge base when relevant.`;
                         id="expertise"
                         value={persona.expertise}
                         onChange={(e) => setPersona(prev => ({ ...prev, expertise: e.target.value }))}
-                        placeholder="List your areas of expertise..."
+                        placeholder="Describe your professional expertise, skills, and knowledge areas"
                         className="min-h-[50px] text-sm"
-                        disabled={personaConfigured}
+                        disabled={personaConfigured && !isEditingPersona}
                       />
                     </div>
 
-                    {/* Set Up Twin Button */}
-                    {!personaConfigured && (
-                      <Button 
-                        onClick={configurePersona}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        Set Up Twin Configuration
-                      </Button>
+                    {/* Success Message */}
+                    {personaConfigured && !isEditingPersona && (
+                      <div className="bg-green-600/20 border border-green-600/50 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-5 h-5 text-green-600" />
+                          <div>
+                            <p className="text-sm font-semibold">AI Twin Configured Successfully</p>
+                            <p className="text-xs text-muted-foreground">Ready to start chatting!</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditingPersona(true)}
+                          className="hover:bg-white/10"
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Edit Configuration
+                        </Button>
+                      </div>
                     )}
 
-                    {/* Success Message */}
-                    {personaConfigured && (
-                      <div className="bg-green-600/20 border border-green-600/50 rounded-lg p-3 flex items-center gap-2">
-                        <Check className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="text-sm font-semibold">AI Twin Configured Successfully</p>
-                          <p className="text-xs text-muted-foreground">Ready to start chatting!</p>
-                        </div>
+                    {/* Set Up Twin Button */}
+                    {(!personaConfigured || isEditingPersona) && (
+                      <div className="space-y-3">
+                        <Button 
+                          onClick={() => {
+                            configurePersona();
+                            setIsEditingPersona(false);
+                          }}
+                          className="w-full relative overflow-hidden group"
+                          size="lg"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-75 transition-opacity" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-25 blur-xl transition-opacity" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 opacity-0 group-hover:opacity-10 blur-2xl transition-opacity" />
+                          <div className="relative flex items-center justify-center gap-2">
+                            <User className="w-4 h-4" />
+                            {isEditingPersona ? 'Save Changes' : 'Set Up Twin Configuration'}
+                          </div>
+                        </Button>
+                        {isEditingPersona && (
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsEditingPersona(false)}
+                            className="w-full hover:bg-white/10"
+                          >
+                            Cancel Editing
+                          </Button>
+                        )}
                       </div>
                     )}
 
@@ -1137,7 +1276,7 @@ Always stay in character and reference the knowledge base when relevant.`;
                       </Button>
                       <Button 
                         onClick={() => setCurrentStep('chat')}
-                        disabled={!personaConfigured}
+                        disabled={!personaConfigured || isEditingPersona}
                         className="flex-1"
                       >
                         Start Chatting →
