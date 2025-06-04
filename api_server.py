@@ -45,11 +45,13 @@ os.environ['OMP_NUM_THREADS'] = '2'  # Allow more threads with 2GB RAM
 os.environ['MKL_NUM_THREADS'] = '2'
 
 def get_device():
-    """Determine best device - prefer CPU for stability, allow CUDA if available"""
-    # With 2GB RAM, we can be more flexible about device selection
+    """Determine best device - prefer CUDA, then MPS, then CPU"""
     if torch.cuda.is_available():
         print("🎮 CUDA detected, using GPU for better performance")
         return "cuda"
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        print("🍎 MPS (Metal Performance Shaders) detected, using Apple GPU")
+        return "mps"
     else:
         print("🖥️  Using CPU for inference")
         return "cpu"
