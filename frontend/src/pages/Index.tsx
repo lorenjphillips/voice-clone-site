@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Play, Send, Upload, FileText, X, Loader2, User, Brain, MessageSquare, HelpCircle, Settings, Trash2, Check, Download, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Play, Send, Upload, FileText, X, Loader2, User, Brain, MessageSquare, HelpCircle, Settings, Trash2, Check, Download, Volume2, ChevronDown } from 'lucide-react';
 import { TTSApi, PersonaConfig, KnowledgeChatRequest } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -111,6 +111,7 @@ const Index = () => {
   const [testVoiceText, setTestVoiceText] = useState('Hello! This is a test of my cloned voice.');
   const [isGeneratingVoice, setIsGeneratingVoice] = useState(false);
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null);
+  const [showVoiceRequirements, setShowVoiceRequirements] = useState(false);
 
   // State for chat
   const [messages, setMessages] = useState<Message[]>([]);
@@ -977,14 +978,27 @@ Remember: You are ${persona.name}, having a natural conversation. Stay true to y
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-auto space-y-4">
+                    {/* Voice Requirements - Collapsible */}
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-sm">Voice Sample Requirements</h3>
-                      <ul className="text-sm text-muted-foreground list-disc pl-4 space-y-1">
-                        <li>3-5 seconds of clear speech</li>
-                        <li>WAV or M4A format preferred</li>
-                        <li>Minimal background noise</li>
-                        <li>Speak naturally and clearly</li>
-                      </ul>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowVoiceRequirements(!showVoiceRequirements)}
+                        className="w-full justify-between text-sm hover:bg-white/10"
+                        size="sm"
+                      >
+                        <span>Voice Sample Requirements</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showVoiceRequirements ? 'rotate-180' : ''}`} />
+                      </Button>
+                      {showVoiceRequirements && (
+                        <div className="bg-card/30 rounded-lg p-3 border border-border/50">
+                          <ul className="text-sm text-muted-foreground space-y-1">
+                            <li>• 3-5 seconds of clear speech</li>
+                            <li>• WAV or M4A format preferred</li>
+                            <li>• Minimal background noise</li>
+                            <li>• Speak naturally and clearly</li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
 
                     <div 
