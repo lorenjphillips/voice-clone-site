@@ -49,9 +49,9 @@ def get_device():
     if torch.cuda.is_available():
         print("🎮 CUDA detected, using GPU for better performance")
         return "cuda"
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        print("🍎 MPS (Metal Performance Shaders) detected, using Apple GPU")
-        return "mps"
+    # elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+    #     print("🍎 MPS (Metal Performance Shaders) detected, using Apple GPU")
+    #     return "mps"
     else:
         print("🖥️  Using CPU for inference")
         return "cpu"

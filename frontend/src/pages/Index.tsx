@@ -674,74 +674,117 @@ Remember: You are ${persona.name}, having a natural conversation. Stay true to y
           </div>
         </header>
 
-        {/* Progress Indicator */}
-        <div className="mb-4 flex items-center justify-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${documentsEmbedded ? 'bg-green-600' : 'bg-gray-600'}`}>
-              {documentsEmbedded ? <Check className="w-4 h-4" /> : '1'}
-            </div>
-            <span className="text-sm">Documents</span>
-          </div>
-          <div className="w-8 h-1 bg-gray-600" />
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${voiceCloneGenerated ? 'bg-green-600' : 'bg-gray-600'}`}>
-              {voiceCloneGenerated ? <Check className="w-4 h-4" /> : '2'}
-            </div>
-            <span className="text-sm">Voice</span>
-          </div>
-          <div className="w-8 h-1 bg-gray-600" />
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${personaConfigured ? 'bg-green-600' : 'bg-gray-600'}`}>
-              {personaConfigured ? <Check className="w-4 h-4" /> : '3'}
-            </div>
-            <span className="text-sm">Persona</span>
-          </div>
-          <div className="w-8 h-1 bg-gray-600" />
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${canProceedToChat && currentStep === 'chat' ? 'bg-green-600' : 'bg-gray-600'}`}>
-              4
-            </div>
-            <span className="text-sm">Chat</span>
+        {/* Unified Navigation with Progress */}
+        <div className="mb-4 flex items-center justify-center">
+          <div className="flex items-center gap-1 bg-card/50 backdrop-blur-sm rounded-lg p-1 border border-border">
+            <button 
+              onClick={() => setCurrentStep('upload')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm font-medium ${
+                currentStep === 'upload' 
+                  ? 'bg-white/10 text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                documentsEmbedded ? 'bg-green-600' : 'bg-gray-600'
+              }`}>
+                {documentsEmbedded ? <Check className="w-3 h-3" /> : '1'}
+              </div>
+              <span>Documents</span>
+            </button>
+            
+            <button 
+              onClick={() => {
+                if (!canProceedToVoice) {
+                  toast({
+                    title: "Complete previous step",
+                    description: "Please upload and embed documents first",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                setCurrentStep('voice');
+              }}
+              disabled={!canProceedToVoice}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm font-medium ${
+                currentStep === 'voice' 
+                  ? 'bg-white/10 text-foreground' 
+                  : canProceedToVoice 
+                    ? 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    : 'text-muted-foreground/50 cursor-not-allowed'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                voiceCloneGenerated ? 'bg-green-600' : 'bg-gray-600'
+              }`}>
+                {voiceCloneGenerated ? <Check className="w-3 h-3" /> : '2'}
+              </div>
+              <span>Voice</span>
+            </button>
+            
+            <button 
+              onClick={() => {
+                if (!canProceedToPersona) {
+                  toast({
+                    title: "Complete previous steps",
+                    description: "Please complete document embedding and voice cloning first",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                setCurrentStep('persona');
+              }}
+              disabled={!canProceedToPersona}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm font-medium ${
+                currentStep === 'persona' 
+                  ? 'bg-white/10 text-foreground' 
+                  : canProceedToPersona 
+                    ? 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    : 'text-muted-foreground/50 cursor-not-allowed'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                personaConfigured ? 'bg-green-600' : 'bg-gray-600'
+              }`}>
+                {personaConfigured ? <Check className="w-3 h-3" /> : '3'}
+              </div>
+              <span>Persona</span>
+            </button>
+            
+            <button 
+              onClick={() => {
+                if (!canProceedToChat) {
+                  toast({
+                    title: "Complete previous steps",
+                    description: "Please complete all setup steps first",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                setCurrentStep('chat');
+              }}
+              disabled={!canProceedToChat}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm font-medium ${
+                currentStep === 'chat' 
+                  ? 'bg-white/10 text-foreground' 
+                  : canProceedToChat 
+                    ? 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                    : 'text-muted-foreground/50 cursor-not-allowed'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                canProceedToChat && currentStep === 'chat' ? 'bg-green-600' : 'bg-gray-600'
+              }`}>
+                4
+              </div>
+              <span>Chat</span>
+            </button>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <Tabs value={currentStep} onValueChange={(value: any) => {
-            // Enforce sequential flow
-            if (value === 'voice' && !canProceedToVoice) {
-              toast({
-                title: "Complete previous step",
-                description: "Please upload and embed documents first",
-                variant: "destructive"
-              });
-              return;
-            }
-            if (value === 'persona' && !canProceedToPersona) {
-              toast({
-                title: "Complete previous steps",
-                description: "Please complete document embedding and voice cloning first",
-                variant: "destructive"
-              });
-              return;
-            }
-            if (value === 'chat' && !canProceedToChat) {
-              toast({
-                title: "Complete previous steps",
-                description: "Please complete all setup steps first",
-                variant: "destructive"
-              });
-              return;
-            }
-            setCurrentStep(value);
-          }} className="flex-1 flex flex-col">
-            <TabsList className="mb-4 flex-shrink-0">
-              <TabsTrigger value="upload">1. Upload</TabsTrigger>
-              <TabsTrigger value="voice" disabled={!canProceedToVoice}>2. Voice</TabsTrigger>
-              <TabsTrigger value="persona" disabled={!canProceedToPersona}>3. Persona</TabsTrigger>
-              <TabsTrigger value="chat" disabled={!canProceedToChat}>4. Chat</TabsTrigger>
-            </TabsList>
-
+          <Tabs value={currentStep} onValueChange={(value: string) => setCurrentStep(value as 'upload' | 'voice' | 'persona' | 'chat')} className="flex-1 flex flex-col">
             <div className="flex-1 overflow-auto">
               {/* Step 1: Document Upload */}
               <TabsContent value="upload" className="h-full">
@@ -753,66 +796,76 @@ Remember: You are ${persona.name}, having a natural conversation. Stay true to y
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 overflow-auto space-y-3">
-                    {/* File Upload Area */}
-                    <div 
-                      className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-red-500 transition-colors bg-card/50 relative overflow-hidden"
-                      onClick={() => !documentsEmbedded && fileInputRef.current?.click()}
-                      onDragOver={(e) => { e.preventDefault(); if (!documentsEmbedded) e.dataTransfer.dropEffect = 'copy'; }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (!documentsEmbedded && e.dataTransfer.files[0]) {
-                          handleFileUpload(e.dataTransfer.files[0]);
-                        }
-                      }}
-                    >
-                      {isUploading && (
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                    {/* Horizontal Layout: File Upload on Left, Paste Text on Right */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* File Upload Area */}
+                      <div 
+                        className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-red-500 transition-colors bg-card/50 relative overflow-hidden"
+                        onClick={() => !documentsEmbedded && fileInputRef.current?.click()}
+                        onDragOver={(e) => { e.preventDefault(); if (!documentsEmbedded) e.dataTransfer.dropEffect = 'copy'; }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!documentsEmbedded && e.dataTransfer.files[0]) {
+                            handleFileUpload(e.dataTransfer.files[0]);
+                          }
+                        }}
+                      >
+                        {isUploading && (
+                          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                            <div className="text-center">
+                              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                              <p className="text-xs">Processing...</p>
+                              <Progress value={uploadProgress} className="w-32 mt-2" />
+                            </div>
+                          </div>
+                        )}
+                        <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm mb-1">
+                          {documentsEmbedded ? 'Documents embedded' : 'Drop files or click'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          TXT, PDF, DOC, etc. (max 10MB)
+                        </p>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept={Object.values(SUPPORTED_TYPES).join(',')}
+                          onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+                          className="hidden"
+                          disabled={documentsEmbedded}
+                        />
+                      </div>
+
+                      {/* Paste Text Option */}
+                      {!documentsEmbedded ? (
+                        <div className="space-y-2">
+                          <Label className="text-sm">Or paste text directly:</Label>
+                          <Textarea
+                            value={pastedText}
+                            onChange={(e) => setPastedText(e.target.value)}
+                            placeholder="Paste your text here..."
+                            className="min-h-[120px] text-sm bg-card/50 border-border resize-none"
+                            disabled={documentsEmbedded}
+                          />
+                          <Button 
+                            onClick={handlePasteText}
+                            disabled={!pastedText.trim() || documents.length >= MAX_DOCUMENTS || documentsEmbedded}
+                            variant="outline"
+                            size="sm"
+                            className="w-full hover:bg-white/10"
+                          >
+                            Add Text
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center border-2 border-dashed border-green-600/30 rounded-lg bg-green-600/10 p-6">
                           <div className="text-center">
-                            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                            <p className="text-sm">Processing documents...</p>
-                            <Progress value={uploadProgress} className="w-48 mt-2" />
+                            <Check className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                            <p className="text-sm text-green-600">Ready for next step</p>
                           </div>
                         </div>
                       )}
-                      <Upload className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm mb-1">
-                        {documentsEmbedded ? 'Documents already embedded' : 'Drop files here or click to upload'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Supports: TXT, MD, CSV, JSON, PDF, DOC, DOCX (max 10MB each)
-                      </p>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept={Object.values(SUPPORTED_TYPES).join(',')}
-                        onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
-                        className="hidden"
-                        disabled={documentsEmbedded}
-                      />
                     </div>
-
-                    {/* Paste Text Option */}
-                    {!documentsEmbedded && (
-                      <div className="space-y-2">
-                        <Label className="text-sm">Or paste text directly:</Label>
-                        <Textarea
-                          value={pastedText}
-                          onChange={(e) => setPastedText(e.target.value)}
-                          placeholder="Paste your text here..."
-                          className="min-h-[60px] text-sm bg-card/50 border-border"
-                          disabled={documentsEmbedded}
-                        />
-                        <Button 
-                          onClick={handlePasteText}
-                          disabled={!pastedText.trim() || documents.length >= MAX_DOCUMENTS || documentsEmbedded}
-                          variant="outline"
-                          size="sm"
-                          className="hover:bg-white/10"
-                        >
-                          Add Text
-                        </Button>
-                      </div>
-                    )}
 
                     {/* Documents List */}
                     {documents.length > 0 && (
